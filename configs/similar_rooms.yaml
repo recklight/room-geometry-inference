@@ -1,0 +1,8 @@
+# Two rooms of similar depth whose lengths differ by about 2.8 m (a harder classification).
+data:
+  dataset: data/similar_rooms/dataset.csv
+synthetic:
+  class_names: [long, square]
+  room_sizes_m: [[10.7, 7.5], [7.9, 7.6]]
+evaluation:
+  positive_class: long

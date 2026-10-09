@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+
+# Testing / linting caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Data and run outputs never enter git; .gitkeep keeps the empty folders.
+data/*
+!data/.gitkeep
+outputs/*
+!outputs/.gitkeep
+examples/output/
+*.wav
+*.mat
+*.dat
+*.bin
+*.npy
+*.npz
+*.joblib
+*.pt
+*.xlsx
+*.xls
+*.svm
+# Dataset indexes and personal configs can hold file names, room geometry or
+# absolute paths.
+dataset.csv
+configs/my_*.yaml
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,19 @@
+# Small, fast settings for synthetic data (examples, smoke tests, CI).
+data:
+  dataset: data/synthetic/dataset.csv
+synthetic:
+  n_rooms_per_class: 4
+  n_recordings_per_room: 2
+  duration_s: 1.0
+sensitivity:
+  delay_offsets_samples: [0.0, 1.0, 10.0]
+  bearings_deg: [15.0, 45.0, 75.0]
+  shifts_m: [-0.25, 0.0, 0.25]
+  snr_db: [0.0, 20.0]
+  n_trials: 2
+denoising:
+  architectures: [[64]]
+  n_epochs: 100
+  n_components: 5
+evaluation:
+  n_splits: 4

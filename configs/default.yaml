@@ -1,0 +1,87 @@
+# Default configuration.  Every key is optional; omitted keys keep these values.
+# Override single values on the command line with  --set section.key=value
+seed: 0                         # master seed: folds, synthetic data, noise, model initialization
+data:
+  dataset: data/dataset.csv     # placeholder: point it at your own data
+synthetic:
+  class_names: [large, small]   # room classes, one per entry of room_sizes_m
+  room_sizes_m: [[10.7, 7.5], [3.5, 3.0]]  # nominal [width, depth] of every class, meters
+  room_jitter_m: 0.3            # each side drawn within this distance of the nominal one
+  n_rooms_per_class: 8          # distinct rooms per class (the cross-validation groups)
+  n_recordings_per_room: 3      # placements measured in every room
+  source_distance_range_m: [0.8, 1.6]  # direct-path distance drawn from [low, high]
+  source_bearing_deg: 45.0      # source bearing seen from the microphone
+  wall_margin_m: 0.3            # minimum distance of microphone and source from the walls
+  excitation: white             # white | pink | speech_like | babble | sine
+  duration_s: 2.0               # length of every recording, seconds
+  snr_db: 30.0                  # signal-to-noise ratio at the microphone; null = no noise
+  noise: white                  # white | pink | babble | sine
+acoustics:
+  sample_rate: 16000            # rate of all processing, Hz (recordings are resampled)
+  speed_of_sound_m_s: 343.0     # used unless temperature_c is set
+  temperature_c: null           # air temperature; when set, the speed of sound follows from it
+  max_order: 1                  # image-source truncation order
+  order_mode: per_axis          # per_axis | total
+  reflection: 1.0               # pressure reflection coefficient of every wall
+  delay: integer                # integer | fractional (windowed sinc)
+  rir_taps: 1600                # length of simulated impulse responses (100 ms at 16 kHz)
+room:
+  size_m: [10.7, 7.5]           # [width, depth] of the simulate / sensitivity scene, meters
+  microphone_m: [5.35, 3.75]    # microphone position of that scene
+  source_m: [6.35, 4.75]        # source position of that scene
+identification:
+  method: nlms                  # nlms | lms | least_squares
+  n_taps: 1600                  # length of the identified response; must cover the farthest echo
+  step: 0.8                     # step size: (0, 2) for nlms, below 2 / (n_taps * power) for lms
+  regularization: 1.0e-10       # nlms normalization guard; least squares: diagonal loading
+  prune_threshold: 0.001        # taps below this fraction of the peak are set to zero
+echoes:
+  n_echoes: 9                   # arrivals kept, the direct sound included
+  method: peaks                 # peaks | top_k
+  min_separation_taps: 3        # minimum distance between two picked peaks
+  relative_height: 0.02         # peaks below this fraction of the largest magnitude are ignored
+  interpolate: false            # refine arrivals to sub-sample precision with a parabola
+  compensate_spreading: true    # weight taps by their delay so distant echoes are not lost
+inversion:
+  source_bearing_deg: 45.0      # assumed source bearing (first-order echoes cannot reveal it)
+  rank_metric: tap_match        # tap_match | l1 | l2
+  tolerance_taps: 2.0           # arrival tolerance of tap_match
+  refine: true                  # least-squares fit of every candidate to all nine arrivals
+  max_candidates: 20            # distinct candidates kept and resynthesized
+sensitivity:
+  sweeps: [delay_offset, source_bearing, source_shift, snr]  # delay_offset | source_bearing | source_shift | snr
+  delay_offsets_samples: [0.0, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0]  # offsets added to every arrival
+  bearings_deg: [5.0, 15.0, 25.0, 35.0, 45.0, 55.0, 65.0, 75.0, 85.0]  # true source bearings
+  shifts_m: [-0.5, -0.25, -0.1, 0.0, 0.1, 0.25, 0.5]  # source displacements along x and y
+  snr_db: [-5.0, 0.0, 5.0, 10.0, 20.0, 30.0]  # signal-to-noise ratios of the full chain
+  n_trials: 10                  # noise realizations per signal-to-noise ratio
+denoising:
+  methods: [identity, linear, pca, mlp]  # identity | linear | pca | mlp | deep_autoencoder
+  architectures: [[300, 300, 300]]  # hidden-layer widths; every network is tried with each
+  activation: logistic          # logistic | relu | tanh
+  n_epochs: 300                 # training passes of the networks
+  learning_rate: 0.001          # Adam step size of the networks
+  batch_size: 32                # mini-batch size of the networks
+  weight_decay: 0.0001          # L2 penalty of the networks
+  n_components: 10              # principal components of pca
+  device: cpu                   # cpu | cuda (deep_autoencoder)
+features:
+  representation: decay_curve   # magnitude | decay_curve | echo_delays | imf_energy
+  floor_db: -60.0               # floor of the energy decay curve, dB
+  max_imfs: 6                   # intrinsic mode functions described by imf_energy
+  emd_tolerance: 0.3            # sifting stops below this normalized squared difference
+model:
+  name: svm                     # svm | knn | tree | template (template needs magnitude)
+  svm_c: 10.0                   # penalty of the support vector machine
+  svm_gamma: scale              # RBF kernel width: scale | auto | a positive number
+  n_neighbors: 5                # neighbors of the distance-weighted knn
+  tree_max_depth: null          # depth limit of the decision tree; null = grow fully
+  template_tolerance_taps: 2.0  # arrival tolerance of the template matcher
+  template_min_score: 0.7       # below this match rate predict answers unknown (not evaluate)
+evaluation:
+  n_splits: 5                   # cross-validation folds, stratified and grouped by room
+  positive_class: large         # class whose recall is the sensitivity
+output:
+  root: outputs                 # run folders are created here when --out is not given
+  figure_format: png            # png | pdf | svg
+  dpi: 150                      # resolution of raster figures
