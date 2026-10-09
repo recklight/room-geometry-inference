@@ -1,7 +1,8 @@
 """Language and privacy checks on the text files of the repository.
 
-Chinese text uses traditional characters and Taiwan wording, the README keeps
-its section order, and no file contains a local path or an e-mail address.
+Chinese text uses traditional characters and Taiwan wording, README.md and
+README.zh-TW.md keep the same sections and table layout, the same code and the
+same formulas, and no file contains a local path or an e-mail address.
 """
 
 from __future__ import annotations
@@ -13,10 +14,31 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 README = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+README_ZH = (PROJECT_ROOT / "README.zh-TW.md").read_text(encoding="utf-8")
 THIS_FILE = Path(__file__).resolve()
 
-#: Every level-2 heading of the README, in order.
+#: Every level-2 heading of README.md, in order.
 EXPECTED_H2 = [
+    "Contents",
+    "Overview",
+    "Method",
+    "Installation",
+    "Quick start",
+    "Usage",
+    "CLI reference",
+    "Project layout",
+    "Data preparation",
+    "Configuration",
+    "Results and metrics",
+    "Known limitations",
+    "Design notes",
+    "Development and testing",
+    "References",
+    "License",
+]
+
+#: The same headings in README.zh-TW.md.
+EXPECTED_H2_ZH = [
     "目錄",
     "專案簡介",
     "方法說明",
@@ -144,21 +166,103 @@ def test_the_patterns_catch_what_they_are_meant_to():
     assert not re.search(FORBIDDEN_PATTERNS["drive-letter path"], "$f:\\mathbb{R}$")
 
 
-def test_readme_headings_are_in_order():
-    headings = re.findall(r"^## (.+?)\s*$", README, re.MULTILINE)
-    assert headings == EXPECTED_H2
+@pytest.mark.parametrize(
+    ("readme", "expected"),
+    [(README, EXPECTED_H2), (README_ZH, EXPECTED_H2_ZH)],
+    ids=["README.md", "README.zh-TW.md"],
+)
+def test_readme_headings_are_in_order(readme, expected):
+    headings = re.findall(r"^## (.+?)\s*$", readme, re.MULTILINE)
+    assert headings == expected
 
 
-def test_readme_opens_with_badges_and_author_and_closes_with_the_license():
+@pytest.mark.parametrize(
+    ("readme", "switch", "author", "license_line"),
+    [
+        (
+            README,
+            "English | [繁體中文](README.zh-TW.md)",
+            "Author: RL",
+            "MIT License, Copyright (c) RL. See [LICENSE](LICENSE).",
+        ),
+        (
+            README_ZH,
+            "[English](README.md) | 繁體中文",
+            "作者：RL",
+            "MIT License，Copyright (c) RL。詳見 [LICENSE](LICENSE)。",
+        ),
+    ],
+    ids=["README.md", "README.zh-TW.md"],
+)
+def test_readme_opens_with_badges_and_author_and_closes_with_the_license(
+    readme, switch, author, license_line
+):
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     name = re.search(r'^name = "([^"]+)"$', pyproject, re.MULTILINE).group(1)
-    lines = README.splitlines()
+    lines = readme.splitlines()
     assert lines[0] == f"# {name}"
     assert lines[2].startswith("[![CI](") and lines[3].startswith("[![Python](")
     assert lines[4].startswith("[![License: MIT](")
-    assert "\n作者：RL\n" in README
-    assert "MIT License，Copyright (c) RL。詳見 [LICENSE](LICENSE)。" in README
+    # The language switch sits on its own line right under the badges.
+    assert lines[5] == "" and lines[6] == switch and lines[7] == ""
+    assert f"\n{author}\n" in readme
+    assert readme.rstrip("\n").endswith(license_line)
 
 
-def test_readme_is_written_in_chinese():
-    assert len(_CJK.findall(README)) > 2000
+def test_readme_is_written_in_english():
+    # The only Chinese in it is the text of the link to README.zh-TW.md.
+    assert "".join(_CJK.findall(README)) == "繁體中文"
+
+
+def test_readme_zh_tw_is_written_in_chinese():
+    assert len(_CJK.findall(README_ZH)) > 2000
+
+
+_FENCED = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
+
+
+def outline(readme: str) -> list[str]:
+    """Headings, table rows, bullets, display math and code fences, without their text.
+
+    Table rows are told apart by their number of cells, so a column added to one
+    README and not the other shows up too.
+    """
+    kinds = []
+    for line in readme.splitlines():
+        if line.startswith("```"):
+            kinds.append("fence")
+        elif line.startswith(("## ", "### ")):
+            kinds.append(line.split(" ", 1)[0])
+        elif line.startswith("|"):
+            kinds.append(f"row of {line.count(' | ') + 1}")
+        elif line.startswith("- "):
+            kinds.append("bullet")
+        elif line.startswith("$$"):
+            kinds.append("math")
+    return kinds
+
+
+def code_without_comments(readme: str) -> list[list[str]]:
+    """Every fenced block without its ``# ...`` comments, which are in each README's language."""
+    return [
+        [re.sub(r"(?:^|\s)# .*$", "", line).rstrip() for line in block.splitlines()]
+        for block in _FENCED.findall(readme)
+    ]
+
+
+def formulas(readme: str) -> list[str]:
+    """Inline and display math outside code blocks, sorted.
+
+    An English sentence and its Chinese counterpart can mention the same formulas in a
+    different order, so only the sorted formulas are compared, not where they appear.
+    """
+    return sorted(re.findall(r"\$\$.+?\$\$|\$[^$\n]+\$", _FENCED.sub("", readme)))
+
+
+def test_both_readmes_have_the_same_outline():
+    assert outline(README) == outline(README_ZH)
+
+
+def test_both_readmes_have_the_same_code_and_formulas():
+    assert code_without_comments(README) == code_without_comments(README_ZH)
+    assert formulas(README) == formulas(README_ZH)
