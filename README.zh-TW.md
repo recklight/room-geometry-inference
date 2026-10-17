@@ -96,7 +96,7 @@ $$e[n] = d[n] - \mathbf{w}_n^\top\mathbf{x}_n, \qquad \mathbf{w}_{n+1} = \mathbf
 | `identification.method` | `nlms` | `nlms`、`lms` 或 `least_squares` |
 | `identification.n_taps` | `1600` | 辨識的脈衝響應長度，必須涵蓋最遠的一階回音 |
 | `identification.step` | `0.8` | 步長：NLMS 在 (0, 2)，LMS 必須小於穩定上限 |
-| `identification.regularization` | `1e-10` | NLMS 分母的保護值；最小平方法的對角加載 |
+| `identification.regularization` | `1e-10` | NLMS 分母的保護值；最小平方法的對角負載 |
 | `identification.prune_threshold` | `0.001` | 低於峰值這個比例的 tap 設為 0 |
 
 ### 3. 回音擷取與距離換算
